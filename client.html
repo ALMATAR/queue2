@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>صفحة العميل</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap');
+        body { font-family: 'Cairo', sans-serif; }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .pulse-alert {
+            animation: pulse 2s infinite;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-teal-50 to-blue-100 min-h-screen">
+    <!-- Selection Screen -->
+    <div id="selectionScreen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <div class="text-center mb-8">
+                <svg class="w-24 h-24 mx-auto text-teal-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                </svg>
+                <h2 class="text-3xl font-bold text-gray-800">متابعة دورك</h2>
+                <p class="text-gray-600 mt-2" id="centerNameClient">مرحباً بك في المركز الطبي</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">اختر العيادة:</label>
+                    <select id="clientClinicSelect" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-lg">
+                        <option value="">اختر العيادة</option>
+                    </select>
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">رقم تذكرتك:</label>
+                    <input type="number" id="clientTicketNumber" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-teal-600 focus:outline-none text-lg text-center font-bold" placeholder="أدخل الرقم">
+                </div>
+                
+                <div class="bg-blue-50 rounded-lg p-4">
+                    <p class="text-sm text-gray-700 mb-3 font-bold">للحصول على إشعارات (اختياري):</p>
+                    <input type="email" id="clientEmail" class="w-full px-4 py-2 border border-gray-300 rounded-lg mb-2" placeholder="البريد الإلكتروني">
+                    <input type="tel" id="clientPhone" class="w-full px-4 py-2 border border-gray-300 rounded-lg" placeholder="رقم الهاتف (واتساب)">
+                    <p class="text-xs text-gray-500 mt-2">* سيتم إشعارك عند اقتراب دورك</p>
+                </div>
+                
+                <button onclick="startTracking()" class="w-full bg-teal-600 text-white py-3 rounded-lg text-xl font-bold hover:bg-teal-700 transition-colors">بدء المتابعة</button>
+                
+                <a href="index.html" class="block text-center text-gray-600 hover:text-gray-800 mt-4">العودة للصفحة الرئيسية</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tracking Screen -->
+    <div id="trackingScreen" class="hidden min-h-screen p-4">
+        <div class="max-w-2xl mx-auto">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-teal-600 to-blue-600 text-white rounded-xl shadow-lg p-6 mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 id="trackingClinicName" class="text-2xl font-bold">عيادة طب الأسرة</h2>
+                        <p class="text-sm mt-1">رقم تذكرتك: <span id="trackingTicketNumber" class="text-2xl font-bold">25</span></p>
+                    </div>
+                    <button onclick="stopTracking()" class="bg-white text-teal-600 px-4 py-2 rounded-lg font-bold hover:bg-gray-100">إيقاف</button>
+                </div>
+            </div>
+
+            <!-- Current Number -->
+            <div class="bg-white rounded-xl shadow-lg p-8 mb-6 text-center">
+                <p class="text-gray-600 mb-2">الرقم الحالي</p>
+                <p id="currentNumberTracking" class="text-8xl font-black text-blue-600 mb-4">0</p>
+                <div id="statusMessage" class="text-lg font-bold text-gray-700"></div>
+            </div>
+
+            <!-- Waiting Info -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                    <svg class="w-12 h-12 mx-auto text-orange-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p class="text-gray-600 text-sm">الأرقام المتبقية</p>
+                    <p id="remainingNumbers" class="text-4xl font-bold text-gray-800">0</p>
+                </div>
+                
+                <div class="bg-white rounded-xl shadow-lg p-6 text-center">
+                    <svg class="w-12 h-12 mx-auto text-green-600 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <p class="text-gray-600 text-sm">حالة العيادة</p>
+                    <p id="clinicStatus" class="text-lg font-bold text-green-600">نشطة</p>
+                </div>
+            </div>
+
+            <!-- Alert -->
+            <div id="yourTurnAlert" class="hidden pulse-alert bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl shadow-2xl p-8 text-center">
+                <svg class="w-20 h-20 mx-auto mb-4 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                </svg>
+                <h3 class="text-3xl font-bold mb-2">حان دورك!</h3>
+                <p class="text-xl">يرجى التوجه إلى العيادة الآن</p>
+            </div>
+
+            <!-- Last Update -->
+            <div class="text-center text-gray-600 mt-6">
+                <p class="text-sm">آخر تحديث: <span id="lastUpdate">--:--</span></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "YOUR_DATABASE_URL",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let trackingClinicId = null;
+        let trackingNumber = null;
+        let notificationShown = false;
+
+        window.onload = function() {
+            loadCenterName();
+            loadClinics();
+        };
+
+        function loadCenterName() {
+            db.ref('settings/centerName').once('value', (snapshot) => {
+                const name = snapshot.val() || 'المركز الطبي';
+                document.getElementById('centerNameClient').textContent = 'مرحباً بك في ' + name;
+            });
+        }
+
+        function loadClinics() {
+            db.ref('clinics').once('value', (snapshot) => {
+                const clinics = snapshot.val() || {};
+                const select = document.getElementById('clientClinicSelect');
+                
+                Object.keys(clinics).forEach(id => {
+                    const clinic = clinics[id];
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = clinic.name;
+                    select.appendChild(option);
+                });
+            });
+        }
+
+        function startTracking() {
+            const clinicId = document.getElementById('clientClinicSelect').value;
+            const ticketNumber = parseInt(document.getElementById('clientTicketNumber').value);
+            const email = document.getElementById('clientEmail').value;
+            const phone = document.getElementById('clientPhone').value;
+
+            if (!clinicId || !ticketNumber) {
+                alert('يرجى اختيار العيادة وإدخال رقم التذكرة');
+                return;
+            }
+
+            trackingClinicId = clinicId;
+            trackingNumber = ticketNumber;
+
+            db.ref('clinics/' + clinicId).once('value', (snapshot) => {
+                const clinic = snapshot.val();
+                document.getElementById('trackingClinicName').textContent = clinic.name;
+                document.getElementById('trackingTicketNumber').textContent = ticketNumber;
+
+                // Save tracking info (optional notifications)
+                if (email || phone) {
+                    db.ref('clientTracking').push({
+                        clinicId: clinicId,
+                        ticketNumber: ticketNumber,
+                        email: email,
+                        phone: phone,
+                        timestamp: Date.now()
+                    });
+                }
+
+                showTrackingScreen();
+                startListening();
+            });
+        }
+
+        function showTrackingScreen() {
+            document.getElementById('selectionScreen').classList.add('hidden');
+            document.getElementById('trackingScreen').classList.remove('hidden');
+        }
+
+        function stopTracking() {
+            if (confirm('هل تريد إيقاف المتابعة؟')) {
+                trackingClinicId = null;
+                trackingNumber = null;
+                notificationShown = false;
+                document.getElementById('trackingScreen').classList.add('hidden');
+                document.getElementById('selectionScreen').classList.remove('hidden');
+                document.getElementById('clientTicketNumber').value = '';
+                document.getElementById('clientEmail').value = '';
+                document.getElementById('clientPhone').value = '';
+            }
+        }
+
+        function startListening() {
+            db.ref('clinics/' + trackingClinicId).on('value', (snapshot) => {
+                const clinic = snapshot.val();
+                updateTrackingInfo(clinic);
+            });
+        }
+
+        function updateTrackingInfo(clinic) {
+            const currentNumber = clinic.currentNumber || 0;
+            document.getElementById('currentNumberTracking').textContent = currentNumber;
+            
+            // Update last update time
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString('ar-EG', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+
+            // Calculate remaining
+            const remaining = trackingNumber - currentNumber;
+            document.getElementById('remainingNumbers').textContent = remaining > 0 ? remaining : 0;
+
+            // Update status
+            const statusEl = document.getElementById('clinicStatus');
+            if (clinic.status === 'active') {
+                statusEl.textContent = 'نشطة';
+                statusEl.className = 'text-lg font-bold text-green-600';
+            } else {
+                statusEl.textContent = 'متوقفة';
+                statusEl.className = 'text-lg font-bold text-red-600';
+            }
+
+            // Update status message
+            const messageEl = document.getElementById('statusMessage');
+            const alertEl = document.getElementById('yourTurnAlert');
+
+            if (currentNumber >= trackingNumber) {
+                messageEl.textContent = '🎉 حان دورك الآن!';
+                messageEl.className = 'text-lg font-bold text-green-600';
+                alertEl.classList.remove('hidden');
+                
+                if (!notificationShown) {
+                    playNotificationSound();
+                    notificationShown = true;
+                    
+                    // Browser notification
+                    if ('Notification' in window && Notification.permission === 'granted') {
+                        new Notification('حان دورك!', {
+                            body: 'يرجى التوجه إلى ' + clinic.name,
+                            icon: '/icon.png'
+                        });
+                    }
+                }
+            } else if (remaining <= 3 && remaining > 0) {
+                messageEl.textContent = '⚠️ دورك قريب جداً!';
+                messageEl.className = 'text-lg font-bold text-orange-600';
+                alertEl.classList.add('hidden');
+            } else if (remaining <= 10 && remaining > 0) {
+                messageEl.textContent = '⏳ دورك اقترب';
+                messageEl.className = 'text-lg font-bold text-blue-600';
+                alertEl.classList.add('hidden');
+            } else {
+                messageEl.textContent = 'يرجى الانتظار';
+                messageEl.className = 'text-lg font-bold text-gray-600';
+                alertEl.classList.add('hidden');
+            }
+        }
+
+        function playNotificationSound() {
+            const audio = new Audio('audio/ding.mp3');
+            audio.play().catch(() => {
+                // If audio fails, use beep
+                const context = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = context.createOscillator();
+                oscillator.connect(context.destination);
+                oscillator.frequency.value = 800;
+                oscillator.start();
+                oscillator.stop(context.currentTime + 0.3);
+            });
+        }
+
+        // Request notification permission on load
+        if ('Notification' in window && Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    </script>
+</body>
+</html>
