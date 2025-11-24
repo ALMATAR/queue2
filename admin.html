@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap');
         body { font-family: 'Cairo', sans-serif; }
@@ -14,10 +15,46 @@
 </head>
 <body class="bg-gray-100">
     <div class="container mx-auto px-4 py-6">
+        <!-- Login Screen -->
+    <div id="loginScreen" class="min-h-screen flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full">
+            <div class="text-center mb-8">
+                <svg class="w-20 h-20 mx-auto text-red-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                </svg>
+                <h2 class="text-3xl font-bold text-gray-800">تسجيل دخول الإدارة</h2>
+                <p class="text-gray-600 mt-2">للمديرين فقط</p>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">البريد الإلكتروني:</label>
+                    <input type="email" id="adminEmail" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-600 focus:outline-none text-lg" placeholder="admin@example.com">
+                </div>
+                
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">كلمة السر:</label>
+                    <input type="password" id="adminPassword" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-red-600 focus:outline-none text-lg" placeholder="••••••••">
+                </div>
+                
+                <button onclick="adminLogin()" class="w-full bg-red-600 text-white py-3 rounded-lg text-xl font-bold hover:bg-red-700 transition-colors">دخول</button>
+                
+                <a href="index.html" class="block text-center text-gray-600 hover:text-gray-800 mt-4">العودة للصفحة الرئيسية</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="adminPanel" class="hidden">
         <!-- Header -->
         <div class="bg-gradient-to-r from-red-600 to-red-800 text-white p-6 rounded-lg shadow-lg mb-6">
-            <h1 class="text-3xl font-bold">صفحة الإدارة</h1>
-            <p class="mt-2">إدارة النظام والإعدادات العامة</p>
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold">صفحة الإدارة</h1>
+                    <p class="mt-2">إدارة النظام والإعدادات العامة</p>
+                </div>
+                <button onclick="adminLogout()" class="bg-white text-red-600 px-6 py-2 rounded-lg font-bold hover:bg-gray-100">خروج</button>
+            </div>
         </div>
 
         <!-- Center Name -->
@@ -133,6 +170,7 @@
             <a href="index.html" class="inline-block bg-gray-600 text-white px-8 py-3 rounded-lg hover:bg-gray-700">العودة للصفحة الرئيسية</a>
         </div>
     </div>
+    </div>
 
     <!-- Add/Edit Clinic Modal -->
     <div id="clinicModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -149,8 +187,25 @@
                     <input type="number" id="clinicNumber" class="w-full px-4 py-2 border border-gray-300 rounded-lg">
                 </div>
                 <div>
-                    <label class="block text-gray-700 mb-2">رقم الشاشة (1-4):</label>
-                    <input type="number" id="clinicScreen" class="w-full px-4 py-2 border border-gray-300 rounded-lg" min="1" max="4">
+                    <label class="block text-gray-700 mb-2">رقم الشاشة (يمكن اختيار أكثر من شاشة):</label>
+                    <div class="grid grid-cols-4 gap-2">
+                        <label class="flex items-center gap-2 bg-gray-50 p-2 rounded cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" class="clinic-screen-checkbox" value="1">
+                            <span>شاشة 1</span>
+                        </label>
+                        <label class="flex items-center gap-2 bg-gray-50 p-2 rounded cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" class="clinic-screen-checkbox" value="2">
+                            <span>شاشة 2</span>
+                        </label>
+                        <label class="flex items-center gap-2 bg-gray-50 p-2 rounded cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" class="clinic-screen-checkbox" value="3">
+                            <span>شاشة 3</span>
+                        </label>
+                        <label class="flex items-center gap-2 bg-gray-50 p-2 rounded cursor-pointer hover:bg-gray-100">
+                            <input type="checkbox" class="clinic-screen-checkbox" value="4">
+                            <span>شاشة 4</span>
+                        </label>
+                    </div>
                 </div>
                 <div>
                     <label class="block text-gray-700 mb-2">كلمة السر:</label>
@@ -166,29 +221,63 @@
 
     <script>
         // Firebase Configuration - استبدل بمعلومات Firebase الخاصة بك
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyArFKjBYsFhsPyJPJpjLhH2eSEHlUFEzhI",
-  authDomain: "queue-717d5.firebaseapp.com",
-  projectId: "queue-717d5",
-  storageBucket: "queue-717d5.firebasestorage.app",
-  messagingSenderId: "837806460328",
-  appId: "1:837806460328:web:f2070b93a2784b1b25619d",
-  measurementId: "G-GM30LE46F6"
-};
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "YOUR_DATABASE_URL",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
 
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
+        const auth = firebase.auth();
 
         let mediaRecorder;
         let recordedChunks = [];
         let recordedBlob;
+        let currentUser = null;
 
-        // Load initial data
-        window.onload = function() {
-            loadSettings();
-            loadClinics();
-        };
+        // Check authentication status
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('adminPanel').classList.remove('hidden');
+                loadSettings();
+                loadClinics();
+            } else {
+                currentUser = null;
+                document.getElementById('loginScreen').classList.remove('hidden');
+                document.getElementById('adminPanel').classList.add('hidden');
+            }
+        });
+
+        function adminLogin() {
+            const email = document.getElementById('adminEmail').value;
+            const password = document.getElementById('adminPassword').value;
+
+            if (!email || !password) {
+                alert('يرجى إدخال البريد الإلكتروني وكلمة السر');
+                return;
+            }
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    console.log('تم تسجيل الدخول بنجاح');
+                })
+                .catch((error) => {
+                    alert('خطأ في تسجيل الدخول: ' + error.message);
+                });
+        }
+
+        function adminLogout() {
+            if (confirm('هل تريد تسجيل الخروج؟')) {
+                auth.signOut();
+            }
+        }
 
         function loadSettings() {
             db.ref('settings').once('value', (snapshot) => {
@@ -248,6 +337,7 @@ const firebaseConfig = {
                 
                 Object.keys(clinics).forEach(id => {
                     const clinic = clinics[id];
+                    const screens = Array.isArray(clinic.screens) ? clinic.screens.join(', ') : clinic.screen;
                     
                     // Add to list
                     const div = document.createElement('div');
@@ -256,7 +346,7 @@ const firebaseConfig = {
                         <div>
                             <span class="font-bold">${clinic.name}</span>
                             <span class="text-gray-600 mr-4">رقم: ${clinic.number}</span>
-                            <span class="text-gray-600 mr-4">شاشة: ${clinic.screen}</span>
+                            <span class="text-gray-600 mr-4">شاشات: ${screens}</span>
                             <span class="text-gray-600 mr-4">الرقم الحالي: ${clinic.currentNumber || 0}</span>
                         </div>
                         <div class="flex gap-2">
@@ -280,8 +370,8 @@ const firebaseConfig = {
             document.getElementById('editClinicId').value = '';
             document.getElementById('clinicName').value = '';
             document.getElementById('clinicNumber').value = '';
-            document.getElementById('clinicScreen').value = '1';
             document.getElementById('clinicPassword').value = '';
+            document.querySelectorAll('.clinic-screen-checkbox').forEach(cb => cb.checked = false);
             document.getElementById('clinicModal').classList.remove('hidden');
         }
 
@@ -292,8 +382,14 @@ const firebaseConfig = {
                 document.getElementById('editClinicId').value = id;
                 document.getElementById('clinicName').value = clinic.name;
                 document.getElementById('clinicNumber').value = clinic.number;
-                document.getElementById('clinicScreen').value = clinic.screen;
                 document.getElementById('clinicPassword').value = clinic.password;
+                
+                // Set screens checkboxes
+                const screens = Array.isArray(clinic.screens) ? clinic.screens : [clinic.screen];
+                document.querySelectorAll('.clinic-screen-checkbox').forEach(cb => {
+                    cb.checked = screens.includes(parseInt(cb.value));
+                });
+                
                 document.getElementById('clinicModal').classList.remove('hidden');
             });
         }
@@ -302,18 +398,20 @@ const firebaseConfig = {
             const id = document.getElementById('editClinicId').value;
             const name = document.getElementById('clinicName').value;
             const number = document.getElementById('clinicNumber').value;
-            const screen = document.getElementById('clinicScreen').value;
             const password = document.getElementById('clinicPassword').value;
+            
+            const screens = Array.from(document.querySelectorAll('.clinic-screen-checkbox:checked'))
+                .map(cb => parseInt(cb.value));
 
-            if (!name || !number || !screen || !password) {
-                alert('يرجى ملء جميع الحقول');
+            if (!name || !number || !password || screens.length === 0) {
+                alert('يرجى ملء جميع الحقول واختيار شاشة واحدة على الأقل');
                 return;
             }
 
             const clinicData = {
                 name: name,
                 number: parseInt(number),
-                screen: parseInt(screen),
+                screens: screens,
                 password: password,
                 currentNumber: 0,
                 status: 'active',
