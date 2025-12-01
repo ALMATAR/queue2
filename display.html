@@ -836,6 +836,55 @@ function showNextDoctor() {
             if (newsTickerInterval) clearInterval(newsTickerInterval);
         });
 
+
+// الاستماع لأوامر التحكم بالفيديو من الإدارة
+function listenForVideoControls() {
+    const video = document.getElementById('videoPlayer');
+    
+    db.ref('videoControl').limitToLast(1).on('child_added', (snapshot) => {
+        const data = snapshot.val();
+        // التأكد أن الأمر جديد (لم يمر عليه أكثر من 5 ثواني) لتجنب تنفيذ أوامر قديمة عند تحديث الصفحة
+        if (Date.now() - data.timestamp < 5000) {
+            
+            switch(data.action) {
+                case 'play':
+                    video.play();
+                    break;
+                case 'pause':
+                    video.pause();
+                    break;
+                case 'stop': // نعتبرها إيقاف مؤقت
+                    video.pause();
+                    video.currentTime = 0;
+                    break;
+                case 'mute':
+                    video.muted = !video.muted;
+                    updateMuteIcons(); // دالة موجودة لديك في display.html
+                    break;
+                case 'next':
+                    currentVideoIndex = (currentVideoIndex + 1) % videos.length;
+                    video.src = videos[currentVideoIndex];
+                    video.play();
+                    break;
+                case 'previous':
+                    currentVideoIndex = (currentVideoIndex - 1 + videos.length) % videos.length;
+                    video.src = videos[currentVideoIndex];
+                    video.play();
+                    break;
+                case 'volume':
+                    if(data.value) {
+                        video.volume = data.value / 100;
+                        video.muted = false; // إلغاء الكتم عند تغيير الصوت
+                    }
+                    break;
+            }
+        }
+    });
+}
+
+
+
+        
     </script>
 </body>
 </html>
