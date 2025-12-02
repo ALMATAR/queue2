@@ -668,8 +668,12 @@ function showNextDoctor() {
                 const settings = snapshot.val() || {};
                 const useLocal = settings.useLocalVideos || false;
                 const localPath = settings.localVideoPath || '/sdcard/Videos/';
-                const videoList = settings.videoList || ['video1.mp4', 'video2.mp4', 'video3.mp4'];
-                
+                const videoList = settings.videoList || [
+        "https://drive.google.com/uc?export=download&id=1Mqyckx5RGGdvXcsZLkq3MjknmerT33zw",
+        "https://drive.google.com/uc?export=download&id=1M_HUtkMFUkF7SCm1xgQs_eGVBkSl7y1I",
+        "https://drive.google.com/uc?export=download&id=FILE_ID_3"
+    ];
+
                 videos = videoList.map(v => {
                     if (useLocal) {
                         return localPath + v;
